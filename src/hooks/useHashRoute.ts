@@ -5,6 +5,7 @@ type Route =
   | { page: "commits" }
   | { page: "plan" }
   | { page: "review" }
+  | { page: "files"; path: string }
   | { page: "commit"; hash: string };
 
 function parseHash(hash: string): Route {
@@ -12,6 +13,8 @@ function parseHash(hash: string): Route {
   if (h === "commits") return { page: "commits" };
   if (h === "plan") return { page: "plan" };
   if (h === "review") return { page: "review" };
+  if (h === "files") return { page: "files", path: "" };
+  if (h.startsWith("files/")) return { page: "files", path: decodeURIComponent(h.slice(6)) };
   if (h.startsWith("commit/")) {
     const commitHash = h.slice("commit/".length);
     if (commitHash) return { page: "commit", hash: commitHash };

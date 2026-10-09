@@ -11,6 +11,8 @@ export function useStatus() {
   return {
     loading: data === null,
     branch: data?.branch ?? "",
+    headCommit: data?.headCommit ?? null,
+    repoName: data?.cwd ? data.cwd.slice(data.cwd.lastIndexOf("/") + 1) : "",
     hasTerminal: data?.terminalSurface != null,
     actions: (data?.actions as MenuItem[] | undefined) ?? [],
     hasPlan: data?.hasPlan ?? false,

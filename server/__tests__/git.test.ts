@@ -90,6 +90,24 @@ describe("createGitService", () => {
     expect(branch).toBe("(no commits)");
   });
 
+  test("getHeadCommit returns short hash", async () => {
+    const runner = createFakeRunner({
+      "rev-parse --short HEAD": "1a2b3c4\n",
+    });
+    const git = createGitService(runner, "/tmp/test");
+    const hash = await git.getHeadCommit();
+    expect(hash).toBe("1a2b3c4");
+  });
+
+  test("getHeadCommit returns null when no HEAD", async () => {
+    const runner: CommandRunner = async (_cmd) => {
+      throw new Error("no HEAD");
+    };
+    const git = createGitService(runner, "/tmp/test");
+    const hash = await git.getHeadCommit();
+    expect(hash).toBeNull();
+  });
+
   test("getDefaultBranch from symbolic-ref", async () => {
     const runner = createFakeRunner({
       "symbolic-ref refs/remotes/origin/HEAD --short": "origin/main\n",

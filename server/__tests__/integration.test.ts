@@ -31,6 +31,7 @@ function createFakeRunner(): { runner: CommandRunner; calls: string[][] } {
     calls.push(cmd);
     const key = cmd.join(" ");
     if (key === "git rev-parse HEAD") return "abc123\n";
+    if (key === "git rev-parse --short HEAD") return "abc1234\n";
     if (key.includes("rev-parse --abbrev-ref HEAD")) return "feature/test\n";
     if (key.includes("symbolic-ref")) return "origin/main\n";
     if (key.includes("merge-base")) return "abc123\n";
@@ -38,6 +39,7 @@ function createFakeRunner(): { runner: CommandRunner; calls: string[][] } {
     if (key.includes("diff --name-only")) return "src/index.ts\n";
     if (key.includes("branch -a")) return "main\nfeature/test\n";
     if (key.includes("status --porcelain")) return "M src/index.ts\n";
+    if (key.includes("ls-files --cached --others")) return "src/index.ts\0README.md\0";
     if (key.includes("gh api repos/") && key.includes("/pulls") && !key.includes("reviews"))
       return JSON.stringify([
         {
@@ -148,6 +150,7 @@ describe("API integration", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.branch).toBe("feature/test");
+    expect(data.headCommit).toBe("abc1234");
     expect(data.status).toContain("M src/index.ts");
     expect(data.cwd).toBe("/tmp/test");
   });
@@ -173,6 +176,29 @@ describe("API integration", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.files).toContain("src/index.ts");
+  });
+
+  test("GET /api/files lists repository files", async () => {
+    const res = await fetch(`${BASE_URL}/api/files`, { headers: validHeaders() });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.files).toEqual(["README.md", "src/index.ts"]);
+  });
+
+  test("GET /api/file requires a path and rejects unlisted files", async () => {
+    const missing = await fetch(`${BASE_URL}/api/file`, { headers: validHeaders() });
+    expect(missing.status).toBe(400);
+    const escape = await fetch(`${BASE_URL}/api/file?path=../../etc/passwd`, {
+      headers: validHeaders(),
+    });
+    expect(escape.status).toBe(404);
+  });
+
+  test("GET /api/files rejects requests from a foreign origin", async () => {
+    const res = await fetch(`${BASE_URL}/api/files`, {
+      headers: { ...validHeaders(), Origin: "https://evil.example" },
+    });
+    expect(res.status).toBe(403);
   });
 
   test("GET /api/branches returns branches and current", async () => {

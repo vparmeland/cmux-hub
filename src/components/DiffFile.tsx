@@ -362,7 +362,7 @@ export function DiffFile({ file, onComment, prComments = [], pendingComments = [
       if (item.type === "hunk-header") {
         return (
           <tr className="bg-[#121d2f]">
-            <td colSpan={4} className="text-[#58a6ff]/80 text-xs font-mono px-4 py-1">
+            <td colSpan={4} className="text-[#58a6ff]/80 text-[10.2px] font-mono px-4 py-1">
               {item.header}
             </td>
           </tr>
@@ -382,7 +382,7 @@ export function DiffFile({ file, onComment, prComments = [], pendingComments = [
           <tr className="bg-[#161b22] hover:bg-[#1c2128]">
             <td colSpan={4} className="text-center py-1">
               <button
-                className="text-[#58a6ff] hover:text-[#79c0ff] text-xs font-mono px-4 py-0.5 disabled:opacity-50"
+                className="text-[#58a6ff] hover:text-[#79c0ff] text-[10.2px] font-mono px-4 py-0.5 disabled:opacity-50"
                 disabled={isLoading}
                 onClick={() =>
                   handleExpand(item.direction, item.fromLine, item.toLine, item.hunkIndex)
@@ -435,7 +435,7 @@ export function DiffFile({ file, onComment, prComments = [], pendingComments = [
           <tr>
             <td colSpan={4} className="px-4 py-1">
               <button
-                className="text-xs text-[#848d97] hover:text-[#adbac7] border border-[#30363d] rounded px-2 py-0.5 hover:border-[#848d97]"
+                className="text-[10.2px] text-[#848d97] hover:text-[#adbac7] border border-[#30363d] rounded px-2 py-0.5 hover:border-[#848d97]"
                 onClick={async () => {
                   await navigator.clipboard.writeText(ref);
                   setCopiedRef(true);
@@ -530,13 +530,13 @@ export function DiffFile({ file, onComment, prComments = [], pendingComments = [
         className="flex items-center gap-2 px-4 py-2 bg-[#161b22] border-b border-[#30363d] cursor-pointer hover:bg-[#1c2128] sticky top-0 z-10 -mx-4"
         onClick={() => setCollapsed(!collapsed)}
       >
-        <span className="text-[#848d97] select-none text-xs">
+        <span className="text-[#848d97] select-none text-[10.2px]">
           {collapsed ? "\u25b6" : "\u25bc"}
         </span>
-        <span className="text-[#adbac7] font-mono text-sm flex-1">{file.newPath}</span>
+        <span className="text-[#adbac7] font-mono text-[11.9px] flex-1">{file.newPath}</span>
         {onComment && (
           <button
-            className="text-[#848d97] hover:text-[#58a6ff] text-sm px-4 py-1.5 rounded hover:bg-[#30363d] transition-colors"
+            className="text-[#848d97] hover:text-[#58a6ff] text-[11.9px] px-4 py-1.5 rounded hover:bg-[#30363d] transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               setShowFileComment((v) => !v);
@@ -547,7 +547,7 @@ export function DiffFile({ file, onComment, prComments = [], pendingComments = [
           </button>
         )}
         {badge && (
-          <span className={`${badgeColor} text-xs px-2 py-0.5 rounded-full font-medium`}>
+          <span className={`${badgeColor} text-[10.2px] px-2 py-0.5 rounded-full font-medium`}>
             {badge}
           </span>
         )}

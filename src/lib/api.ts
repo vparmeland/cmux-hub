@@ -52,6 +52,20 @@ export const api = {
     );
   },
 
+  getFiles() {
+    return fetchJSON<{ files: string[] }>("/api/files");
+  },
+
+  getFile(path: string) {
+    return fetchJSON<{
+      content: string | null;
+      size: number;
+      reason?: "binary" | "too-large";
+      tokenLines: import("./diff-parser.ts").DiffToken[][] | null;
+      html: string | null;
+    }>(`/api/file?${new URLSearchParams({ path })}`);
+  },
+
   getLog(count = 20) {
     return fetchJSON<{ commits: Array<{ hash: string; message: string; relativeDate: string }> }>(
       `/api/log?count=${count}`,
@@ -72,6 +86,7 @@ export const api = {
     return fetchJSON<{
       status: string;
       branch: string;
+      headCommit: string | null;
       cwd: string;
       terminalSurface: string | null;
       actions: import("../../server/actions.ts").MenuItem[];

@@ -80,16 +80,16 @@ export function DiffLine({
   };
 
   return (
-    <tr className={`${bg} ${selectedBg} group font-mono text-sm leading-6`}>
+    <tr className={`${bg} ${selectedBg} group font-mono text-[11.9px] leading-5`}>
       <td
-        className={`${gutterBg} ${gutterText} w-8 text-right px-1 select-none align-top text-xs ${canComment ? "cursor-pointer hover:bg-[#1f6feb]/30" : ""}`}
+        className={`${gutterBg} ${gutterText} w-8 text-right px-1 select-none align-top text-[10.2px] ${canComment ? "cursor-pointer hover:bg-[#1f6feb]/30" : ""}`}
         onMouseDown={handleMouseDown}
         onMouseEnter={onMouseEnter}
       >
         {line.oldLineNumber ?? ""}
       </td>
       <td
-        className={`${gutterBg} ${gutterText} w-8 text-right px-1 select-none align-top text-xs ${canComment ? "cursor-pointer hover:bg-[#1f6feb]/30" : ""}`}
+        className={`${gutterBg} ${gutterText} w-8 text-right px-1 select-none align-top text-[10.2px] ${canComment ? "cursor-pointer hover:bg-[#1f6feb]/30" : ""}`}
         onMouseDown={handleMouseDown}
         onMouseEnter={onMouseEnter}
       >

@@ -13,7 +13,7 @@ import { loadActions, DEFAULT_ACTIONS } from "../server/actions.ts";
 import type { MenuItem } from "../server/actions.ts";
 import { loadLaunchJson, createLauncher } from "../server/launcher.ts";
 import type { Launcher } from "../server/launcher.ts";
-import { resolveTargetDir } from "./lib/target-dir.ts";
+import { isGitWorkTree, resolveTargetDir } from "./lib/target-dir.ts";
 import {
   resolveDefaultReviewDir,
   resolveReviewDirs,
@@ -193,7 +193,8 @@ async function getFocusedCwd(): Promise<string | undefined> {
     const exitCode = await proc.exited;
     if (exitCode !== 0) return undefined;
     const match = /^focused_cwd=(.+)$/m.exec(output);
-    if (match?.[1]) return match[1];
+    // cmux reports "unknown" when it cannot resolve the focused cwd
+    if (match?.[1] && match[1] !== "unknown") return match[1];
   } catch {
     // cmux not available
   }
@@ -208,6 +209,12 @@ const CWD = await resolveTargetDir({
   run: defaultCommandRunner,
   getFocusedCwd,
 });
+
+// Every view is git-backed; outside a work tree git only returns errors.
+if (!(await isGitWorkTree(defaultCommandRunner, CWD))) {
+  console.error(`cmux-hub: not a git repository: ${CWD}`);
+  process.exit(1);
+}
 
 const git = createGitService(defaultCommandRunner, CWD);
 const connector = DRY_RUN ? createDryRunConnector() : createSocketConnector();

@@ -12,6 +12,8 @@ import {
 import { parseDiff, type ParsedDiff } from "../src/lib/diff-parser.ts";
 import { highlightDiffFiles } from "./diff-highlight.ts";
 import { getLangFromPath, highlightLines } from "./highlighter.ts";
+import { renderMarkdown } from "./markdown.ts";
+import { imageType, isMarkdown } from "../src/lib/file-types.ts";
 import { logger } from "./logger.ts";
 import type { MenuItem } from "./actions.ts";
 import { buildCommandWithEnv, findAction } from "./actions.ts";
@@ -317,6 +319,70 @@ export function createAppConfig(deps: AppDeps) {
       },
     },
 
+    "/api/files": {
+      async GET(req: Request) {
+        const secErr = validateRequest(req, securityConfig);
+        if (secErr) return secErr;
+        try {
+          return jsonResponse({ files: await git.listFiles() });
+        } catch (e) {
+          return errorResponse(e instanceof Error ? e.message : "Unknown error");
+        }
+      },
+    },
+
+    "/api/file": {
+      async GET(req: Request) {
+        const secErr = validateRequest(req, securityConfig);
+        if (secErr) return secErr;
+        const filePath = new URL(req.url).searchParams.get("path");
+        if (!filePath) return errorResponse("path required", 400);
+        let file;
+        try {
+          file = await git.readFile(filePath);
+        } catch (e) {
+          return errorResponse(e instanceof Error ? e.message : "Unknown error", 404);
+        }
+        const tokenLines =
+          file.content === null
+            ? null
+            : await highlightLines(file.content.replace(/\n$/, ""), getLangFromPath(filePath));
+        const html =
+          file.content !== null && isMarkdown(filePath)
+            ? renderMarkdown(file.content, filePath)
+            : null;
+        return jsonResponse({ ...file, tokenLines, html });
+      },
+    },
+
+    // Raw bytes for image previews. Images only; the CSP sandbox stops scripts
+    // in SVGs opened directly, CORP stops other sites from embedding them.
+    "/api/file/raw": {
+      async GET(req: Request) {
+        const secErr = validateRequest(req, securityConfig);
+        if (secErr) return secErr;
+        const filePath = new URL(req.url).searchParams.get("path");
+        if (!filePath) return errorResponse("path required", 400);
+        const type = imageType(filePath);
+        if (!type) return errorResponse("Only image files can be served raw", 415);
+        let realFile;
+        try {
+          realFile = await git.resolveFile(filePath);
+        } catch (e) {
+          return errorResponse(e instanceof Error ? e.message : "Unknown error", 404);
+        }
+        return new Response(Bun.file(realFile), {
+          headers: {
+            "Content-Type": type,
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+            "Cross-Origin-Resource-Policy": "same-origin",
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+          },
+        });
+      },
+    },
+
     "/api/log": {
       async GET(req: Request) {
         const secErr = validateRequest(req, securityConfig);
@@ -372,15 +438,17 @@ export function createAppConfig(deps: AppDeps) {
         const secErr = validateRequest(req, securityConfig);
         if (secErr) return secErr;
         try {
-          const [status, branch, planPath, reviewFiles] = await Promise.all([
+          const [status, branch, headCommit, planPath, reviewFiles] = await Promise.all([
             git.getStatus(),
             git.getCurrentBranch(),
+            git.getHeadCommit(),
             findPlanFile(cwd).catch(() => null),
             listReviewFiles(reviewDirs).catch(() => []),
           ]);
           return jsonResponse({
             status,
             branch,
+            headCommit,
             cwd,
             terminalSurface: defaultSurfaceId ?? null,
             actions: deps.actions ?? [],

@@ -1,47 +1,10 @@
 [
+  { "label": "IDE", "type": "shell", "command": "code \"$CMUX_HUB_CWD\"" },
   {
-    "label": "Commit",
-    "submenu": [
-      {
-        "label": "Commit",
-        "type": "paste-and-enter",
-        "command": "/commit"
-      },
-      {
-        "label": "Commit & Push",
-        "type": "paste-and-enter",
-        "command": "/commit-push"
-      },
-      {
-        "label": "Create PR",
-        "type": "paste-and-enter",
-        "command": "/create-pr"
-      }
-    ]
-  },
-  {
-    "label": "Release",
-    "submenu": [
-      {
-        "label": "Patch",
-        "type": "paste-and-enter",
-        "command": "!npm version patch && git push && git push --tags"
-      },
-      {
-        "label": "Minor",
-        "type": "paste-and-enter",
-        "command": "!npm version minor && git push && git push --tags"
-      },
-      {
-        "label": "Major",
-        "type": "paste-and-enter",
-        "command": "!npm version major && git push && git push --tags"
-      }
-    ]
-  },
-  {
-    "label": "Open Repo",
+    "label": "Terminal",
     "type": "shell",
-    "command": "URL=$(gh repo view --json url -q .url) && PANE=$(cmux --json list-panes | jq -r --arg sid \"$CMUX_HUB_BROWSER_SURFACE_ID\" '.panes[] | select(.surface_refs[] == $sid) | .ref') && cmux new-surface --type browser --pane \"$PANE\" --url \"$URL\""
-  }
+    "command": "PANE=$(cmux --json list-panes | jq -r --arg sid \"$CMUX_HUB_SURFACE_ID\" '.panes[] | select(any(.surface_refs[], .surface_ids[]; . == $sid)) | .ref') && cmux new-surface --type terminal --pane \"$PANE\" --working-directory \"$CMUX_HUB_CWD\" --focus true"
+  },
+  { "label": "GitHub", "type": "shell", "command": "/usr/bin/open \"$(gh browse -n)\"" },
+  { "label": "GH Actions", "type": "shell", "command": "/usr/bin/open \"$(gh browse -n)/actions\"" }
 ]

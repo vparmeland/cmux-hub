@@ -8,9 +8,11 @@ import { useReviewQueue } from "../hooks/useReviewQueue.tsx";
 
 type Props = {
   branch: string;
+  headCommit?: string | null;
   hasTerminal: boolean;
   actions: MenuItem[];
   onShowCommitList?: () => void;
+  onShowFiles?: () => void;
   onShowPlan?: () => void;
   onShowReview?: () => void;
   onShowDiff?: () => void;
@@ -156,9 +158,11 @@ function InputRow({
 
 export function Toolbar({
   branch,
+  headCommit,
   hasTerminal,
   actions,
   onShowCommitList,
+  onShowFiles,
   onShowPlan,
   onShowReview,
   onShowDiff,
@@ -170,7 +174,7 @@ export function Toolbar({
   return (
     <div
       data-testid="toolbar"
-      className="border-b border-[#30363d] bg-[#161b22] px-4 py-2 flex-shrink-0 z-20"
+      className="border-b border-[#30363d] bg-[#161b22] px-4 py-2 flex-shrink-0 z-20 [&_*]:text-[11.9px]!"
     >
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1">
@@ -180,6 +184,12 @@ export function Toolbar({
           >
             {branch}
           </button>
+          {headCommit && (
+            <>
+              <span className="text-[#30363d]">:</span>
+              <span className="text-[#848d97] text-sm font-mono leading-none">{headCommit}</span>
+            </>
+          )}
           {onShowCommitList && (
             <>
               <span className="text-[#30363d]">/</span>
@@ -188,6 +198,17 @@ export function Toolbar({
                 onClick={onShowCommitList}
               >
                 Commits
+              </button>
+            </>
+          )}
+          {onShowFiles && (
+            <>
+              <span className="text-[#30363d]">/</span>
+              <button
+                className="text-[#848d97] hover:text-[#c9d1d9] text-sm leading-none"
+                onClick={onShowFiles}
+              >
+                Files
               </button>
             </>
           )}
