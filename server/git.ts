@@ -1,4 +1,13 @@
 import path from "node:path";
+import { realpath } from "node:fs/promises";
+
+const MAX_FILE_BYTES = 1024 * 1024;
+
+export type RepoFile = {
+  content: string | null;
+  size: number;
+  reason?: "binary" | "too-large";
+};
 
 export type CommandRunner = (cmd: string[], options?: { cwd?: string }) => Promise<string>;
 
@@ -82,6 +91,16 @@ export function createGitService(run: CommandRunner, cwd: string) {
       } catch {
         // No commits yet
         return "(no commits)";
+      }
+    },
+
+    async getHeadCommit(): Promise<string | null> {
+      try {
+        const hash = await git(["rev-parse", "--short", "HEAD"]);
+        return hash.trim();
+      } catch {
+        // No commits yet
+        return null;
       }
     },
 
@@ -210,6 +229,41 @@ export function createGitService(run: CommandRunner, cwd: string) {
       } catch {
         return [];
       }
+    },
+
+    /** Tracked + untracked files, excluding gitignored ones. */
+    async listFiles(): Promise<string[]> {
+      const raw = await git(["ls-files", "--cached", "--others", "--exclude-standard", "-z"]);
+      return [...new Set(raw.split("\0").filter(Boolean))].sort();
+    },
+
+    /**
+     * Resolve a file for the file browser. Only paths returned by listFiles()
+     * are served, and the real path (symlinks resolved) must stay inside the
+     * repository.
+     */
+    async resolveFile(filePath: string): Promise<string> {
+      if (!(await this.listFiles()).includes(filePath)) {
+        throw new Error("File not found in repository: " + filePath);
+      }
+      const realRoot = await realpath(cwd);
+      const realFile = await realpath(path.resolve(cwd, filePath));
+      if (!realFile.startsWith(realRoot + path.sep)) {
+        throw new Error("Path outside repository: " + filePath);
+      }
+      return realFile;
+    },
+
+    async readFile(filePath: string): Promise<RepoFile> {
+      const file = Bun.file(await this.resolveFile(filePath));
+      if (file.size > MAX_FILE_BYTES)
+        return { content: null, size: file.size, reason: "too-large" };
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      // A NUL byte in the first 8 KB means binary (same heuristic as git)
+      if (bytes.subarray(0, 8000).includes(0)) {
+        return { content: null, size: file.size, reason: "binary" };
+      }
+      return { content: new TextDecoder().decode(bytes), size: file.size };
     },
 
     /**

@@ -132,3 +132,41 @@ test("GET /api/status returns the current branch name", async ({ request }) => {
   const data = await res.json();
   expect(data.branch).toBe("feature/test");
 });
+
+test("Files page browses the repository like GitHub", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("toolbar").getByRole("button", { name: "Files" }).click();
+  const view = page.getByTestId("files-view");
+  await expect(view.getByRole("button", { name: "hello.ts" })).toBeVisible();
+
+  await view.getByRole("textbox", { name: "Go to file" }).fill("large");
+  await expect(view.getByRole("button", { name: "hello.ts" })).toHaveCount(0);
+  await expect(view.getByRole("button", { name: "large-file.ts" })).toBeVisible();
+  await view.getByRole("textbox", { name: "Go to file" }).fill("");
+
+  await view.getByRole("button", { name: "hello.ts" }).click();
+  await expect(page).toHaveURL(/#\/files\/hello\.ts$/);
+  await expect(view.getByRole("table")).toContainText('export const greeting = "hello world";');
+
+  // Breadcrumb root returns to the folder listing
+  await view.getByRole("navigation", { name: "File path" }).getByRole("button").first().click();
+  await expect(page).toHaveURL(/#\/files$/);
+  await expect(view.getByRole("button", { name: "new-file.ts" })).toBeVisible();
+});
+
+test("Files page previews README markdown and images", async ({ page }) => {
+  await page.goto("/#/files/README.md");
+  const view = page.getByTestId("files-view");
+  await expect(view.getByRole("heading", { name: "Demo project" })).toBeVisible();
+  const img = view.locator("article img");
+  await expect(img).toHaveAttribute("src", "/api/file/raw?path=logo.png");
+  await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(1);
+
+  await view.getByRole("button", { name: "Code" }).click();
+  await expect(view.getByRole("table")).toContainText("# Demo project");
+
+  await page.goto("/#/files/logo.png");
+  await expect
+    .poll(() => view.getByRole("img").evaluate((el: HTMLImageElement) => el.naturalWidth))
+    .toBe(1);
+});

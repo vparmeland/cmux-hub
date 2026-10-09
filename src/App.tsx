@@ -3,6 +3,7 @@ import { DiffView } from "./components/DiffView.tsx";
 import { Toolbar } from "./components/Toolbar.tsx";
 import { CIStatus } from "./components/CIStatus.tsx";
 import { PlanView } from "./components/PlanView.tsx";
+import { FilesView } from "./components/FilesView.tsx";
 import { ReviewView } from "./components/ReviewView.tsx";
 import { LauncherStatus } from "./components/LauncherStatus.tsx";
 import { useDiff } from "./hooks/useDiff.ts";
@@ -27,7 +28,7 @@ export default function App() {
     clearCommit,
   } = useDiff();
   const { route, navigate } = useHashRoute();
-  const { branch, hasTerminal, actions, hasPlan, hasReview } = useStatus();
+  const { branch, headCommit, repoName, hasTerminal, actions, hasPlan, hasReview } = useStatus();
   const { prUrl, prTitle, prState, checks, prComments } = usePRData();
   const { hasLauncher, servers } = useLauncher();
 
@@ -44,13 +45,14 @@ export default function App() {
         )}
         <Toolbar
           branch={branch}
+          headCommit={headCommit}
           hasTerminal={hasTerminal}
           actions={actions}
           onShowDiff={() => {
             navigate("/");
             clearCommit();
           }}
-          onShowCommitList={() => navigate("/commits")}
+          onShowFiles={() => navigate("/files")}
           onShowPlan={hasPlan ? () => navigate("/plan") : undefined}
           onShowReview={hasReview ? () => navigate("/review") : undefined}
         />
@@ -58,7 +60,13 @@ export default function App() {
         <div
           className={`flex-1 overflow-auto px-4 pb-4 transition-opacity duration-200 ${refreshing ? "opacity-60" : "opacity-100"}`}
         >
-          {route.page === "plan" ? (
+          {route.page === "files" ? (
+            <FilesView
+              path={route.path}
+              repoName={repoName}
+              onOpen={(p) => navigate(p ? `/files/${encodeURIComponent(p)}` : "/files")}
+            />
+          ) : route.page === "plan" ? (
             <div className="pt-4">
               <PlanView onBack={() => navigate("/")} hasTerminal={hasTerminal} />
             </div>

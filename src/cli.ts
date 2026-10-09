@@ -193,7 +193,8 @@ async function getFocusedCwd(): Promise<string | undefined> {
     const exitCode = await proc.exited;
     if (exitCode !== 0) return undefined;
     const match = /^focused_cwd=(.+)$/m.exec(output);
-    if (match?.[1]) return match[1];
+    // cmux reports "unknown" when it cannot resolve the focused cwd
+    if (match?.[1] && match[1] !== "unknown") return match[1];
   } catch {
     // cmux not available
   }

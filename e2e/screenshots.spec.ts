@@ -69,3 +69,26 @@ test("screenshot: commit list", async ({ page, request }) => {
   await page.waitForTimeout(300);
   await page.screenshot({ path: join(DOCS_DIR, "commit-list.png"), fullPage: true });
 });
+
+test("screenshot: files browser", async ({ page }) => {
+  await page.goto("/#/files");
+  await expect(
+    page.getByTestId("files-view").getByRole("button", { name: "hello.ts" }),
+  ).toBeVisible();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: join(DOCS_DIR, "files-browser.png") });
+});
+
+test("screenshot: file view", async ({ page }) => {
+  await page.goto("/#/files/large-file.ts");
+  await expect(page.getByTestId("files-view").getByRole("table")).toBeVisible();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: join(DOCS_DIR, "file-view.png") });
+});
+
+test("screenshot: README preview", async ({ page }) => {
+  await page.goto("/#/files/README.md");
+  await expect(page.getByRole("heading", { name: "Getting started" })).toBeVisible();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: join(DOCS_DIR, "readme-preview.png") });
+});

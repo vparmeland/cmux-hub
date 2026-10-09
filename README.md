@@ -1,10 +1,21 @@
-# cmux-hub
+# alp-hub
 
-A browser-based diff viewer for [cmux](https://cmux.dev). See what changed at a glance — syntax-highlighted diffs, inline review comments, commit history, GitHub PR status, and custom toolbar actions, all streamed in real time via WebSocket.
+> **alp-hub is a fork of [azu/cmux-hub](https://github.com/azu/cmux-hub)**. It is not the official cmux-hub and is not supported by its author. See [About this fork](#about-this-fork).
 
-https://github.com/user-attachments/assets/f5fbfd8b-6473-4f83-882e-967a5ca33205
+A browser-based diff viewer and repository browser for [cmux](https://cmux.dev). See what changed at a glance with syntax-highlighted diffs, inline review comments, a GitHub-style file browser with README previews, GitHub PR status and toolbar shortcuts, all streamed in real time via WebSocket.
 
-![cmux-hub with cmux](docs/img/cmux-hub-overview.png)
+The binary, CLI and internal identifiers keep the `cmux-hub` name.
+
+## About this fork
+
+alp-hub is forked from [cmux-hub](https://github.com/azu/cmux-hub) 1.6.0 by azu (MIT licence). It adds:
+
+- A GitHub-style **Files** page with README (markdown) preview and image display
+- The short HEAD commit next to the branch in the toolbar, and a smaller toolbar and code font
+- A default menu with IDE, Terminal, GitHub and GH Actions buttons
+- Updated dependencies (React 19.3, TypeScript 7, lucide-react 1.x and others)
+
+Fixes that apply upstream too are proposed back to cmux-hub (open pull requests): [azu/cmux-hub#22](https://github.com/azu/cmux-hub/pull/22) (exit cleanly outside a git repository) and [azu/cmux-hub#23](https://github.com/azu/cmux-hub/pull/23) (dependency update).
 
 ## Screenshots
 
@@ -20,15 +31,31 @@ Select lines and write review comments that are sent to the cmux terminal.
 
 ![Review Comment](docs/img/review-comment.png)
 
+### Files
+
+Browse the repository like on GitHub: a path breadcrumb, folders first, then files. Gitignored files are hidden and files with uncommitted changes are marked with ●. "Go to file" searches every path.
+
+![Files](docs/img/files-browser.png)
+
+Click a file to view it with line numbers and syntax highlighting.
+
+![File View](docs/img/file-view.png)
+
+### README Preview
+
+Markdown files open in a rendered **Preview** with a **Code** toggle for the raw source. Images (png, jpg, gif, webp, svg, ico, bmp) are displayed directly.
+
+![README Preview](docs/img/readme-preview.png)
+
 ### Commit History
 
-Browse recent commits when no pending changes are detected.
+Browse recent commits when no pending changes are detected, or open `#/commits`.
 
 ![Commit List](docs/img/commit-list.png)
 
 ### Toolbar
 
-Branch name, navigation links, and custom action buttons.
+Branch name and short HEAD commit, the Files link, and the action buttons (IDE, Terminal, GitHub, GH Actions).
 
 ![Toolbar](docs/img/toolbar.png)
 
@@ -37,6 +64,8 @@ Update screenshots: `bun run screenshots`
 ## Features
 
 - Diff view with syntax highlighting (Shiki)
+- GitHub-style file browser with markdown (README) preview and image display
+- Branch and short HEAD commit in the toolbar
 - Real-time diff updates via WebSocket
 - Untracked and unstaged file detection
 - Commit history browser (when no pending changes)
@@ -51,6 +80,7 @@ Update screenshots: `bun run screenshots`
 - Self-update command (`cmux-hub update`)
 - Auto-shutdown when browser tab closes
 - Git worktree support
+- Exits with a clear error when the target directory is not a git repository
 
 ## Prerequisites
 
@@ -64,19 +94,19 @@ Or set `CMUX_SOCKET_MODE=allowAll`.
 
 ## Install
 
-Download binary from [GitHub Releases](https://github.com/azu/cmux-hub/releases/latest):
+alp-hub has no release binaries yet. Build it from source:
 
 ```bash
+git clone https://github.com/vparmeland/cmux-hub.git alp-hub
+cd alp-hub
+git checkout alp-hub
+bun install
+bun run build:compile
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/azu/cmux-hub/releases/latest/download/cmux-hub-darwin-arm64" -o ~/.local/bin/cmux-hub
-chmod +x ~/.local/bin/cmux-hub
+cp cmux-hub ~/.local/bin/cmux-hub
 ```
 
-## Update
-
-```bash
-cmux-hub update
-```
+`cmux-hub update` and the bundled Claude Code plugin still download upstream cmux-hub releases from `azu/cmux-hub`, which replace this build.
 
 ## Usage
 
@@ -96,6 +126,9 @@ cat actions.json | cmux-hub --actions -
 
 When run without `target_dir` from a linked Git worktree, cmux-hub watches that worktree even
 if cmux reports a different focused working directory.
+
+The target directory must be inside a git repository. Otherwise cmux-hub prints
+`cmux-hub: not a git repository: <dir>` and exits with code 1.
 
 ### Usage with cmux + Claude Code
 
@@ -124,10 +157,18 @@ claude plugin update cmux-hub@cmux-hub-marketplace
 
 ```json
 [
-  { "label": "Commit", "type": "paste-and-enter", "command": "commit this change" },
-  { "label": "Create PR", "type": "paste-and-enter", "command": "create a pull request" }
+  { "label": "IDE", "type": "shell", "command": "code \"$CMUX_HUB_CWD\"" },
+  {
+    "label": "Terminal",
+    "type": "shell",
+    "command": "PANE=$(cmux --json list-panes | jq -r --arg sid \"$CMUX_HUB_SURFACE_ID\" '.panes[] | select(any(.surface_refs[], .surface_ids[]; . == $sid)) | .ref') && cmux new-surface --type terminal --pane \"$PANE\" --working-directory \"$CMUX_HUB_CWD\" --focus true"
+  },
+  { "label": "GitHub", "type": "shell", "command": "/usr/bin/open \"$(gh browse -n)\"" },
+  { "label": "GH Actions", "type": "shell", "command": "/usr/bin/open \"$(gh browse -n)/actions\"" }
 ]
 ```
+
+This is the default menu (`cmux-hub-plugin/defaults/actions.json`). GitHub and GH Actions call `/usr/bin/open` because cmux puts its own `open` on `PATH`, which would open the page in the cmux browser instead of your default browser.
 
 `.claude/settings.json`:
 
@@ -173,7 +214,7 @@ The `/api/diff/auto` endpoint computes the appropriate diff range based on the c
 
 ### Commit History
 
-When no pending changes are detected, the UI shows recent commits. Clicking a commit displays its diff. A "Commits" link in the toolbar opens the commit list at any time.
+When no pending changes are detected, the UI shows recent commits. Clicking a commit displays its diff. The commit list is also available at `#/commits`.
 
 ## Custom Actions
 
@@ -257,24 +298,27 @@ PR data is pushed to the frontend via WebSocket every 10 seconds.
 
 ## API Endpoints
 
-| Method | Path                                | Description                                   |
-| ------ | ----------------------------------- | --------------------------------------------- |
-| GET    | `/api/diff`                         | Diff with optional `base` and `target` params |
-| GET    | `/api/diff/auto`                    | Auto-computed diff based on branch context    |
-| GET    | `/api/diff/files`                   | List of changed files                         |
-| GET    | `/api/diff/commit?hash=`            | Diff for a specific commit                    |
-| GET    | `/api/file-lines?path=&start=&end=` | Read file lines                               |
-| GET    | `/api/log?count=`                   | Recent commit log                             |
-| GET    | `/api/branches`                     | List branches and current branch              |
-| GET    | `/api/status`                       | Server status, branch, cwd, actions           |
-| GET    | `/api/plan`                         | Current session's plan file (markdown)        |
-| GET    | `/api/pr`                           | Current PR info                               |
-| GET    | `/api/pr/comments`                  | PR review comments                            |
-| GET    | `/api/ci`                           | CI check statuses                             |
-| POST   | `/api/send-to-terminal`             | Send text to cmux terminal                    |
-| POST   | `/api/comment`                      | Send inline comment to cmux terminal          |
-| POST   | `/api/command`                      | Send command to cmux terminal                 |
-| POST   | `/api/action`                       | Execute a toolbar action by ID                |
+| Method | Path                                | Description                                         |
+| ------ | ----------------------------------- | --------------------------------------------------- |
+| GET    | `/api/diff`                         | Diff with optional `base` and `target` params       |
+| GET    | `/api/diff/auto`                    | Auto-computed diff based on branch context          |
+| GET    | `/api/diff/files`                   | List of changed files                               |
+| GET    | `/api/diff/commit?hash=`            | Diff for a specific commit                          |
+| GET    | `/api/file-lines?path=&start=&end=` | Read file lines                                     |
+| GET    | `/api/files`                        | Repository files (tracked + untracked, not ignored) |
+| GET    | `/api/file?path=`                   | One file: highlighted lines, rendered markdown      |
+| GET    | `/api/file/raw?path=`               | Raw bytes of an image file                          |
+| GET    | `/api/log?count=`                   | Recent commit log                                   |
+| GET    | `/api/branches`                     | List branches and current branch                    |
+| GET    | `/api/status`                       | Server status, branch, cwd, actions                 |
+| GET    | `/api/plan`                         | Current session's plan file (markdown)              |
+| GET    | `/api/pr`                           | Current PR info                                     |
+| GET    | `/api/pr/comments`                  | PR review comments                                  |
+| GET    | `/api/ci`                           | CI check statuses                                   |
+| POST   | `/api/send-to-terminal`             | Send text to cmux terminal                          |
+| POST   | `/api/comment`                      | Send inline comment to cmux terminal                |
+| POST   | `/api/command`                      | Send command to cmux terminal                       |
+| POST   | `/api/action`                       | Execute a toolbar action by ID                      |
 
 WebSocket endpoint: `/ws` — receives `diff-updated` and `pr-updated` messages.
 
@@ -286,6 +330,9 @@ WebSocket endpoint: `/ws` — receives `diff-updated` and `pr-updated` messages.
 - Sec-Fetch-Site check on write operations
 - Null Origin rejected on POST from browsers
 - File path access restricted to repository cwd
+- File browser serves only paths listed by `git ls-files` (gitignored files excluded) and rejects symlinks that resolve outside the repository
+- Raw file endpoint serves images only, with a sandboxing Content-Security-Policy (no scripts in SVGs) and `Cross-Origin-Resource-Policy: same-origin`
+- Markdown previews are sanitized with an allowlist (`sanitize-html`): scripts, event handlers and `javascript:` URLs are removed
 - Commit hash validated against `/^[0-9a-f]{4,40}$/i`
 
 ## Development
@@ -321,6 +368,7 @@ bun run test:e2e  # E2E tests
 - Runtime: Bun
 - Frontend: React 19 + Tailwind CSS + shadcn/ui
 - Syntax Highlighting: Shiki
+- Markdown: markdown-it + sanitize-html
 - cmux communication: Unix domain socket (`/tmp/cmux.sock`) via JSON-RPC
 - git: `Bun.spawn` with git CLI
 - GitHub: `gh` CLI
@@ -333,4 +381,4 @@ bun run test:e2e  # E2E tests
 
 ## License
 
-MIT
+MIT. alp-hub is a fork of [cmux-hub](https://github.com/azu/cmux-hub), Copyright (c) 2026 azu. The original copyright and permission notice are kept in [LICENSE](LICENSE).
